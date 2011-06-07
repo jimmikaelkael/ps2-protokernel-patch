@@ -1,0 +1,19 @@
+ps2-protokernel-patch - PS2 10K kernel patch
+--------------------------------------------
+
+This patch is to be applied on 10K PlayStation2 Kernel in order to fix
+the buggy ExecPS2 syscall that mess up a lot of homebrew softwares running
+on these early models.
+
+To build this patch you need the PS2SDK:
+https://github.com/ps2dev/ps2sdk
+
+To apply this patch, DO NOT RUN THE ELF!!!
+You just need to load the unique elf section to it's proper virtual address.
+Once done, the protokernel will use the patched syscall on every ExecPS2.
+
+Thank to l_oliveira and Silverbull for sharing knowledge and stuff.
+
+----------------------------------------------------------------
+This is research software. It comes with absolutely no warranty.
+

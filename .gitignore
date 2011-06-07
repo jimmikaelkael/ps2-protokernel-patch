@@ -1,0 +1,6 @@
+*.a
+*.o
+*.s
+*.map
+ps2-protokernel-patch.elf
+
