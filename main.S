@@ -11,17 +11,17 @@
 	.set	noreorder
 	.set	noat
 
-	.globl p_800125ec
+	.globl p_program_thid
 	.globl p_800125f4
-	.globl p_80012608
+	.globl p_elfargs
 	.globl p_80017400
 	.globl p_ChangeThreadPriority
 	.globl p_CancelWakeUpThread
 	.globl p_TerminateThread
-	.globl p_kFNC80003f00
+	.globl p_DeleteThread
 	.globl p_kFNC80004e68
 	.globl p_kFNC800021b0
-	.globl p_kFNC80005560
+	.globl p_bcopy
 	.globl p_kFNC80002ac0
 	.globl p_kFNC80002a80
 	.globl p_InitializeGS
@@ -120,15 +120,15 @@ ExecPS2CleanUp:
 	sd	$s0, 0x0010($sp)
 
 	addiu	$fp, $zero, 16
-	daddu	$s5, $a0, $zero
-	daddu	$s4, $a2, $zero
+	daddu	$s5, $a0, $zero		/* store elf entry point into s5 */
+	daddu	$s4, $a2, $zero		/* store argc into s4 */
 	addiu	$s1, $zero, 0x4c
 	addiu	$s0, $zero, 1
 
-	sw	$a1, 0x0000($sp)
-	sw	$a3, 0x0004($sp)
+	sw	$a1, 0x0000($sp)	/* store gp pointer */
+	sw	$a3, 0x0004($sp)	/* store argv */
 
-	lw	$t0, p_800125ec
+	lw	$t0, p_program_thid
 	lw	$s3, 0x0000($t0)
 
 	lw	$v0, p_CancelWakeUpThread
@@ -141,6 +141,7 @@ ExecPS2CleanUp:
 	daddu	$a1, $zero, $zero
 	nop
 
+	/* terminate all threads */
 1:
 	lw	$v0, p_80017400
 	addu	$v0, $s1, $v0
@@ -149,18 +150,18 @@ ExecPS2CleanUp:
 	addiu	$s0, $s0, 1
 	beql	$s0, $s3, 3f
 	addiu	$s0, $s0, 1
-	lw	$v1, p_TerminateThread
 	bne	$v0, $fp, 2f
-	daddu	$v0, $v1, $zero
-	lw	$v0, p_kFNC80003f00
+	nop
+	lw	$v0, p_DeleteThread
 	jalr	$v0
 	daddu	$a0, $s0, $zero
 	beq	$zero, $zero, 3f
 	addiu	$s0, $s0, 1
 2:
+	lw	$v0, p_TerminateThread
 	jalr	$v0
 	daddu	$a0, $s0, $zero
-	lw	$v0, p_kFNC80003f00
+	lw	$v0, p_DeleteThread
 	jalr	$v0
 	daddu	$a0, $s0, $zero
 	addiu	$s0, $s0, 1
@@ -177,35 +178,39 @@ ExecPS2CleanUp:
 	jalr	$v0
 	nop
 
+	/* Does a soft pheripheral EE reset */
 	lw	$v0, p_800125f4
 	jal	SoftPeripheralEEReset
 	sw	$zero, 0x0000($v0)
 
-	lw	$a0, p_80012608
+	/* copy elf args to kernel memory */
 	blez	$s4, 5f
 	nop
 
+	lw	$a0, p_elfargs		/* pointer where to store elf args in kernel memory */
 	lw	$a1, 0x0004($sp)
 4:
 	sll	$v1, $s0, 2
-	lw	$v0, p_kFNC80005560
 	addiu 	$s0, $s0, 1
 	addu	$v1, $v1, $a1
+	lw	$v0, p_bcopy
 	jalr	$v0
 	lw	$a1, 0x0000($v1)
 	daddu 	$a0, $v0, $zero
 	slt	$v0, $s0, $s4
 	bne	$v0, $zero, 4b
-	lw	$a1, 0x0004($v1)
+	lw	$a1, 0x0004($sp)
+
+	/* */
 5:
 	addiu	$v0, $zero, 0x4c
 	mult	$v0, $s3, $v0
 	lw	$a1, p_80017400
-	lw	$a0, p_80012608
+	lw	$a0, p_elfargs
 	lw	$a2, p_kFNC80002ac0
 	addu	$v0, $v0, $a1
 	sw	$a0, 0x0038($v0)
-	lw	$a1, 0x0000($sp)	
+	lw	$a1, 0x0000($sp)
 	sw	$s4, 0x0034($v0)
 	sw	$s5, 0x000c($v0)
 	sw	$s5, 0x0030($v0)
@@ -221,6 +226,7 @@ ExecPS2CleanUp:
 	jalr	$v1
 	nop
 
+	/* return entry point */
 	daddu	$v0, $s5, $zero
 
 	ld	$s0, 0x0010($sp)
@@ -244,13 +250,13 @@ ExecPS2CleanUp:
 
 	.section .rodata
 
-p_800125ec:
+p_program_thid:
 	.word	0x800125ec
 
 p_800125f4:
 	.word	0x800125f4
 
-p_80012608:
+p_elfargs:
 	.word	0x80012608
 
 p_80017400:
@@ -265,7 +271,7 @@ p_ChangeThreadPriority:
 p_TerminateThread:
 	.word	0x80003e00
 
-p_kFNC80003f00:
+p_DeleteThread:
 	.word	0x80003f00
 
 p_kFNC80004e68:
@@ -274,7 +280,7 @@ p_kFNC80004e68:
 p_kFNC800021b0:
 	.word	0x800021b0
 
-p_kFNC80005560:
+p_bcopy:
 	.word	0x80005560
 
 p_kFNC80002ac0:
